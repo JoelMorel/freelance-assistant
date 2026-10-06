@@ -1,5 +1,5 @@
 import React from "react";
-import { openJobLink } from "../utils/deepLink";
+import { openJobLink, isMobileDevice } from "../utils/deepLink";
 
 export default function JobCard({ job, onGenerate, isGenerating }) {
   const getPlatformBadge = (platform) => {
@@ -102,7 +102,7 @@ export default function JobCard({ job, onGenerate, isGenerating }) {
         <div className="flex items-center gap-2 pt-1 sm:pt-0">
           <a
             href={job.link}
-            target="_blank"
+            target={isMobileDevice() ? "_self" : "_blank"}
             rel="noreferrer"
             onClick={(e) => {
               e.preventDefault();

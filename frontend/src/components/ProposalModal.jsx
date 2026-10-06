@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { openJobLink } from "../utils/deepLink";
+import { openJobLink, isMobileDevice } from "../utils/deepLink";
 
 export default function ProposalModal({
   job,
@@ -109,7 +109,7 @@ export default function ProposalModal({
 
             <a
               href={job.link}
-              target="_blank"
+              target={isMobileDevice() ? "_self" : "_blank"}
               rel="noreferrer"
               onClick={(e) => {
                 e.preventDefault();
