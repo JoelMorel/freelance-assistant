@@ -1,7 +1,7 @@
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-PROFILE_KEYWORDS = {
+DEFAULT_KEYWORDS = {
     # High priority core skills (weight 18)
     "react": 18,
     "next.js": 18,
@@ -31,11 +31,11 @@ PROFILE_KEYWORDS = {
     "rest api": 10,
     "seo": 12,
     "php": 10,
-    "shopify": 12,
+    "shopify": 14,
     "stripe": 10,
 }
 
-NEGATIVE_KEYWORDS = {
+DEFAULT_NEGATIVE_KEYWORDS = {
     "c++": -30,
     "embedded": -30,
     "ios developer": -25,
@@ -45,20 +45,35 @@ NEGATIVE_KEYWORDS = {
     "kubernetes": -15,
 }
 
-def score_job(title: str, summary: str, tags: List[str]) -> Tuple[int, List[str]]:
+def score_job(
+    title: str,
+    summary: str,
+    tags: List[str],
+    custom_skills: Optional[List[str]] = None,
+    custom_exclude: Optional[List[str]] = None
+) -> Tuple[int, List[str]]:
     """
-    Computes a match score (0-100) and bullet points explaining why the job matches Joel's profile.
+    Computes a match score (0-100) and bullet points explaining why the job matches.
+    Supports user-specified custom skills to prioritize and negative keywords to exclude.
     """
     text_corpus = f"{title.lower()} {summary.lower()} {' '.join(t.lower() for t in tags)}"
     
-    score = 30  # Baseline interest in web gigs
+    score = 30  # Baseline interest
     matched_reasons = []
     
-    # 1. Title matches carry higher weight
+    # 1. Custom user-prioritized skills
+    active_skills = {k: v for k, v in DEFAULT_KEYWORDS.items()}
+    if custom_skills:
+        for sk in custom_skills:
+            clean_sk = sk.strip().lower()
+            if clean_sk:
+                active_skills[clean_sk] = 22  # Top boost for custom preferences
+
+    # 2. Check title relevance
     title_lower = title.lower()
     if any(k in title_lower for k in ["react", "next", "frontend", "front-end", "web"]):
         score += 25
-        matched_reasons.append("Title strongly matches web/frontend focus")
+        matched_reasons.append("Title matches web/frontend focus")
     elif any(k in title_lower for k in ["wordpress", "woocommerce", "shopify"]):
         score += 25
         matched_reasons.append("Title matches WordPress/e-commerce expertise")
@@ -66,20 +81,32 @@ def score_job(title: str, summary: str, tags: List[str]) -> Tuple[int, List[str]
         score += 20
         matched_reasons.append("Title matches full-stack development")
 
-    # 2. Check keyword presence
+    # 3. Check skill keywords
     found_skills = set()
-    for kw, weight in PROFILE_KEYWORDS.items():
-        # Match as whole word or phrase
+    for kw, weight in active_skills.items():
         pattern = r"\b" + re.escape(kw) + r"\b"
         if re.search(pattern, text_corpus):
             score += weight
             found_skills.add(kw.title())
 
-    # 3. Deduct for negative matches
-    for neg_kw, penalty in NEGATIVE_KEYWORDS.items():
+    # 4. Excluded / negative keywords
+    active_negatives = dict(DEFAULT_NEGATIVE_KEYWORDS)
+    if custom_exclude:
+        for ex in custom_exclude:
+            clean_ex = ex.strip().lower()
+            if clean_ex:
+                active_negatives[clean_ex] = -35
+
+    excluded_found = []
+    for neg_kw, penalty in active_negatives.items():
         pattern = r"\b" + re.escape(neg_kw) + r"\b"
         if re.search(pattern, text_corpus):
             score += penalty
+            if custom_exclude and neg_kw in [e.strip().lower() for e in custom_exclude]:
+                excluded_found.append(neg_kw.title())
+
+    if excluded_found:
+        matched_reasons.append(f"Contains excluded: {', '.join(excluded_found)}")
 
     # Cap score between 0 and 100
     final_score = max(5, min(100, score))

@@ -1,7 +1,7 @@
 import html
 import re
 import httpx
-from typing import List
+from typing import List, Optional
 from models import Job
 from services.scorer import score_job
 
@@ -12,7 +12,11 @@ def clean_html(raw_html: str) -> str:
     clean = html.unescape(clean)
     return " ".join(clean.split())
 
-def fetch_remoteok_jobs(query: str = "") -> List[Job]:
+def fetch_remoteok_jobs(
+    query: str = "",
+    custom_skills: Optional[List[str]] = None,
+    custom_exclude: Optional[List[str]] = None
+) -> List[Job]:
     jobs: List[Job] = []
     url = "https://remoteok.com/api"
     headers = {
@@ -32,7 +36,6 @@ def fetch_remoteok_jobs(query: str = "") -> List[Job]:
     query_lower = query.lower().strip()
 
     for item in data:
-        # First item in RemoteOK is usually API terms metadata
         if not isinstance(item, dict) or "id" not in item:
             continue
 
@@ -44,7 +47,6 @@ def fetch_remoteok_jobs(query: str = "") -> List[Job]:
         link = item.get("url", "")
         published = item.get("date", "")[:10]
 
-        # Check budget / salary
         sal_min = item.get("salary_min", 0)
         sal_max = item.get("salary_max", 0)
         budget = None
@@ -56,12 +58,11 @@ def fetch_remoteok_jobs(query: str = "") -> List[Job]:
             elif sal_max:
                 budget = f"Up to ${sal_max:,}"
 
-        # Filter by search query if provided
         corpus = f"{title.lower()} {summary.lower()} {' '.join(t.lower() for t in tags)}"
         if query_lower and query_lower not in corpus:
             continue
 
-        score, reasons = score_job(title, summary, tags)
+        score, reasons = score_job(title, summary, tags, custom_skills, custom_exclude)
 
         job = Job(
             id=f"remoteok-{item.get('id')}",

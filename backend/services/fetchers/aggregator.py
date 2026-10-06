@@ -5,9 +5,15 @@ from services.fetchers.upwork import fetch_upwork_jobs
 from services.fetchers.remoteok import fetch_remoteok_jobs
 from services.fetchers.weworkremotely import fetch_wwr_jobs
 
-def get_all_jobs(query: str = "", platform: str = "all", min_score: int = 0) -> List[Job]:
+def get_all_jobs(
+    query: str = "",
+    platform: str = "all",
+    min_score: int = 0,
+    custom_skills: Optional[List[str]] = None,
+    custom_exclude: Optional[List[str]] = None
+) -> List[Job]:
     """
-    Fetches jobs across all supported platforms, scores them, filters, and sorts by match_score descending.
+    Fetches jobs across all supported platforms, scores them dynamically, filters, and sorts by match_score descending.
     """
     platform_key = platform.lower().strip()
     results: List[Job] = []
@@ -15,11 +21,11 @@ def get_all_jobs(query: str = "", platform: str = "all", min_score: int = 0) -> 
     tasks = []
     with ThreadPoolExecutor(max_workers=3) as executor:
         if platform_key in ["all", "upwork"]:
-            tasks.append(executor.submit(fetch_upwork_jobs, query))
+            tasks.append(executor.submit(fetch_upwork_jobs, query, custom_skills, custom_exclude))
         if platform_key in ["all", "remoteok"]:
-            tasks.append(executor.submit(fetch_remoteok_jobs, query))
+            tasks.append(executor.submit(fetch_remoteok_jobs, query, custom_skills, custom_exclude))
         if platform_key in ["all", "weworkremotely", "wwr"]:
-            tasks.append(executor.submit(fetch_wwr_jobs, query))
+            tasks.append(executor.submit(fetch_wwr_jobs, query, custom_skills, custom_exclude))
 
         for future in tasks:
             try:

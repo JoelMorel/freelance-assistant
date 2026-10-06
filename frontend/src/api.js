@@ -15,11 +15,19 @@ const API_BASE = (rawBase && !rawBase.includes("localhost"))
   ? rawBase
   : (import.meta.env.DEV ? "http://localhost:8000" : "");
 
-export async function fetchJobs(query = "", platform = "all", minScore = 0) {
+export async function fetchJobs(
+  query = "",
+  platform = "all",
+  minScore = 0,
+  skills = [],
+  exclude = []
+) {
   const params = new URLSearchParams();
   if (query) params.append("q", query);
   if (platform) params.append("platform", platform);
   if (minScore) params.append("min_score", minScore);
+  if (skills && skills.length > 0) params.append("skills", skills.join(","));
+  if (exclude && exclude.length > 0) params.append("exclude", exclude.join(","));
 
   try {
     const res = await axios.get(`${API_BASE}/jobs?${params.toString()}`);

@@ -2,7 +2,7 @@ import html
 import re
 import httpx
 import feedparser
-from typing import List
+from typing import List, Optional
 from models import Job
 from services.scorer import score_job
 
@@ -18,7 +18,11 @@ WWR_FEEDS = [
     "https://weworkremotely.com/categories/remote-front-end-programming-jobs.rss",
 ]
 
-def fetch_wwr_jobs(query: str = "") -> List[Job]:
+def fetch_wwr_jobs(
+    query: str = "",
+    custom_skills: Optional[List[str]] = None,
+    custom_exclude: Optional[List[str]] = None
+) -> List[Job]:
     jobs: List[Job] = []
     seen_links = set()
     query_lower = query.lower().strip()
@@ -44,7 +48,6 @@ def fetch_wwr_jobs(query: str = "") -> List[Job]:
             seen_links.add(link)
 
             raw_title = entry.get("title", "")
-            # Titles in WWR are typically "Company: Role Name"
             if ":" in raw_title:
                 parts = raw_title.split(":", 1)
                 company = parts[0].strip()
@@ -57,18 +60,16 @@ def fetch_wwr_jobs(query: str = "") -> List[Job]:
             summary = clean_html(raw_summary)[:400]
             published = entry.get("published", "")[:16]
 
-            # Infer tags from title and summary
             extracted_tags = []
-            for kw in ["React", "Node", "TypeScript", "JavaScript", "WordPress", "Next.js", "Full-Stack", "Frontend", "Backend"]:
+            for kw in ["React", "Node", "TypeScript", "JavaScript", "WordPress", "Next.js", "Full-Stack", "Frontend", "Backend", "Shopify"]:
                 if kw.lower() in f"{title.lower()} {summary.lower()}":
                     extracted_tags.append(kw)
 
-            # Query filter
             corpus = f"{title.lower()} {summary.lower()} {company.lower()}"
             if query_lower and query_lower not in corpus:
                 continue
 
-            score, reasons = score_job(title, summary, extracted_tags)
+            score, reasons = score_job(title, summary, extracted_tags, custom_skills, custom_exclude)
 
             job = Job(
                 id=f"wwr-{abs(hash(link)) % 10000000}",

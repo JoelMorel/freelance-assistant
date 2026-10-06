@@ -1,6 +1,6 @@
 import json
 import os
-from typing import List
+from typing import List, Optional
 from models import Job
 from services.scorer import score_job
 
@@ -47,11 +47,11 @@ SAMPLE_UPWORK_JOBS = [
     }
 ]
 
-def fetch_upwork_jobs(query: str = "") -> List[Job]:
-    """
-    Fetches Upwork jobs. When Upwork MCP is connected, pulls directly from MCP/API bridge;
-    otherwise surfaces targeted Upwork opportunities matching the query.
-    """
+def fetch_upwork_jobs(
+    query: str = "",
+    custom_skills: Optional[List[str]] = None,
+    custom_exclude: Optional[List[str]] = None
+) -> List[Job]:
     jobs: List[Job] = []
     query_lower = query.lower().strip()
 
@@ -64,8 +64,7 @@ def fetch_upwork_jobs(query: str = "") -> List[Job]:
         if query_lower and query_lower not in corpus:
             continue
 
-        score, reasons = score_job(title, summary, tags)
-        # Upwork jobs with verified payment method get a small trust boost
+        score, reasons = score_job(title, summary, tags, custom_skills, custom_exclude)
         score = min(100, score + 5)
         reasons.append("Payment Verified Client")
 
