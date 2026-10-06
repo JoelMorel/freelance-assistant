@@ -3,8 +3,23 @@ import openai
 from dotenv import load_dotenv
 
 load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=api_key) if api_key else None
+
+openai_key = os.getenv("OPENAI_API_KEY")
+gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+
+client = None
+model_name = "gemini-2.0-flash"
+
+if gemini_key:
+    # Use Google Gemini via official OpenAI-compatible endpoint
+    client = openai.OpenAI(
+        api_key=gemini_key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+    model_name = "gemini-2.0-flash"
+elif openai_key:
+    client = openai.OpenAI(api_key=openai_key)
+    model_name = "gpt-4o-mini"
 
 PROFILE_CONTEXT = """
 You are a senior freelance full-stack web developer named Joel Morel.
@@ -40,7 +55,7 @@ Job Details:
 Instructions:
 Write a winning, personalized {platform} proposal (under 180 words).
 Structure:
-1. Hook: Immediately address their exact challenge or goal (avoid generic "I am writing to apply...").
+1. Hook: Immediately address their exact challenge or goal (avoid generic greetings).
 2. Solution: Outline 2-3 specific steps you will take to deliver this cleanly.
 3. Proof: Reference relevant experience in React, Node, or WordPress/e-commerce that directly matches.
 4. Call to Action: End with a single, high-value clarifying question that prompts a fast reply.
@@ -49,7 +64,7 @@ Return only the final proposal text ready to send.
 """
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model_name,
             messages=[
                 {"role": "system", "content": PROFILE_CONTEXT},
                 {"role": "user", "content": prompt}
@@ -59,7 +74,7 @@ Return only the final proposal text ready to send.
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"[Proposal Generator] OpenAI error: {e}")
+        print(f"[Proposal Generator] AI error with {model_name}: {e}")
         return f"""Hi there,
 
 I reviewed your requirements for "{title}". I've built numerous production applications using React, Node.js, and WordPress, and I'd love to help you bring this to completion with clean architecture and speed.
