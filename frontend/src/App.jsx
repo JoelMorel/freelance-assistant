@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect } from "react";
 import { fetchJobs, generateProposal } from "./api";
 import JobCard from "./components/JobCard";
 import ProposalModal from "./components/ProposalModal";
@@ -15,7 +15,11 @@ export default function App() {
   const [proposal, setProposal] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const loadJobs = async (searchQuery = query, platform = activePlatform, scoreThreshold = minScore) => {
+  const loadJobs = async (
+    searchQuery = query,
+    platform = activePlatform,
+    scoreThreshold = minScore
+  ) => {
     setLoading(true);
     try {
       const data = await fetchJobs(searchQuery, platform, scoreThreshold);
@@ -39,7 +43,7 @@ export default function App() {
   const handleGenerate = async (job) => {
     setSelectedJob(job);
     setIsGenerating(true);
-    setProposal("Generating personalized proposal...");
+    setProposal("Writing customized proposal using your profile...");
     try {
       const prop = await generateProposal({
         title: job.title,
@@ -57,83 +61,85 @@ export default function App() {
   };
 
   const platforms = [
-    { id: "all", label: "All Platforms" },
+    { id: "all", label: "All" },
     { id: "upwork", label: "Upwork" },
     { id: "remoteok", label: "RemoteOK" },
     { id: "weworkremotely", label: "We Work Remotely" },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
-      {/* Top Navbar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-black text-xl shadow-sm">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+      {/* Mobile-Optimized Sticky Navbar */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 shadow-2xs">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-lg shadow-sm">
               FA
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">
-                Freelance Assistant
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-none">
+                Freelance AI
               </h1>
-              <p className="text-xs text-slate-500">
-                Automated multi-platform job hunter & proposal writer
+              <p className="text-[11px] text-slate-500 font-medium">
+                Live Opportunity Radar
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200 font-semibold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Upwork MCP Ready
+            <span className="hidden sm:inline-flex text-[11px] px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200 font-semibold items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Upwork MCP
             </span>
             <button
               onClick={() => loadJobs(query, activePlatform, minScore)}
-              className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition"
+              className="text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1"
+              aria-label="Refresh jobs"
             >
-              🔄 Refresh
+              <span>🔄</span>
+              <span className="hidden xs:inline">Refresh</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="max-w-5xl mx-auto px-4 pt-6">
+      <main className="max-w-4xl mx-auto px-3.5 sm:px-4 pt-4 sm:pt-6">
         {/* Search & Filter Toolbar */}
-        <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200 mb-6 space-y-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl shadow-xs border border-slate-200 mb-4 space-y-3">
           <form onSubmit={handleSearchSubmit} className="flex gap-2">
             <div className="relative flex-1">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search jobs by keyword (e.g. React, Next.js, WordPress, Node)..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
+                enterKeyHint="search"
+                placeholder="Search React, Next.js, WordPress..."
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/60"
               />
-              <span className="absolute left-3.5 top-3 text-slate-400 text-sm">
+              <span className="absolute left-3 top-3 text-slate-400 text-sm">
                 🔍
               </span>
             </div>
             <button
               type="submit"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-xs"
+              className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition shadow-xs"
             >
-              Search
+              Find
             </button>
           </form>
 
-          {/* Filters Row */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
-            {/* Platform Tabs */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          {/* Swipeable Tabs for Mobile Screens */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 flex-1">
               {platforms.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setActivePlatform(p.id)}
-                  className={`px-3 py-1.5 rounded-lg font-medium transition ${
+                  className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition active:scale-95 text-xs ${
                     activePlatform === p.id
-                      ? "bg-white text-slate-900 shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   {p.label}
@@ -141,59 +147,54 @@ export default function App() {
               ))}
             </div>
 
-            {/* Min Fit Score Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-medium">Match Filter:</span>
-              <select
-                value={minScore}
-                onChange={(e) => setMinScore(Number(e.target.value))}
-                className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg border-0 font-medium focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value={0}>All Matches</option>
-                <option value={50}>50%+ Fair Fit</option>
-                <option value={75}>75%+ Good Fit</option>
-                <option value={85}>85%+ Top Matches 🔥</option>
-              </select>
-            </div>
+            {/* Score Dropdown */}
+            <select
+              value={minScore}
+              onChange={(e) => setMinScore(Number(e.target.value))}
+              className="bg-slate-100 text-slate-800 text-xs font-semibold px-2.5 py-1.5 rounded-xl border-0 focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value={0}>All Fits</option>
+              <option value={60}>60%+ Match</option>
+              <option value={80}>80%+ Top Matches 🔥</option>
+            </select>
           </div>
         </div>
 
-        {/* Status / Count Banner */}
-        <div className="flex items-center justify-between mb-4 px-1">
-          <p className="text-sm text-slate-600">
-            Found <strong className="text-slate-900">{jobs.length}</strong>{" "}
-            {jobs.length === 1 ? "opportunity" : "opportunities"}
-            {minScore > 0 && ` with ≥ ${minScore}% match`}
+        {/* Count banner */}
+        <div className="flex items-center justify-between mb-3 px-1 text-xs">
+          <p className="text-slate-500">
+            Found <strong className="text-slate-900 font-bold">{jobs.length}</strong>{" "}
+            {jobs.length === 1 ? "gig" : "gigs"}
           </p>
           {loading && (
-            <span className="text-xs text-indigo-600 font-medium animate-pulse">
-              Fetching live opportunities...
+            <span className="text-indigo-600 font-bold animate-pulse">
+              Syncing live feeds...
             </span>
           )}
         </div>
 
         {/* Jobs List */}
         {loading && jobs.length === 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[1, 2, 3].map((n) => (
               <div
                 key={n}
-                className="bg-white p-6 rounded-2xl border border-slate-200 animate-pulse space-y-3"
+                className="bg-white p-5 rounded-2xl border border-slate-200 animate-pulse space-y-2.5"
               >
-                <div className="h-4 bg-slate-200 rounded w-1/4"></div>
-                <div className="h-6 bg-slate-200 rounded w-3/4"></div>
-                <div className="h-12 bg-slate-100 rounded w-full"></div>
+                <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                <div className="h-5 bg-slate-200 rounded w-4/5"></div>
+                <div className="h-10 bg-slate-100 rounded w-full"></div>
               </div>
             ))}
           </div>
         ) : jobs.length === 0 ? (
-          <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center max-w-lg mx-auto">
+          <div className="bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 text-center max-w-md mx-auto">
             <span className="text-4xl block mb-2">🎯</span>
-            <h3 className="font-bold text-slate-900 text-lg mb-1">
-              No jobs matching this criteria
+            <h3 className="font-bold text-slate-900 text-base mb-1">
+              No matching gigs found
             </h3>
-            <p className="text-sm text-slate-500 mb-4">
-              Try lowering the match filter or clearing your search keywords.
+            <p className="text-xs text-slate-500 mb-4">
+              Try switching platform tabs or clearing your search filter.
             </p>
             <button
               onClick={() => {
@@ -202,13 +203,13 @@ export default function App() {
                 setActivePlatform("all");
                 loadJobs("", "all", 0);
               }}
-              className="text-xs bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg font-semibold hover:bg-indigo-100 transition"
+              className="text-xs bg-indigo-50 text-indigo-700 px-4 py-2.5 rounded-xl font-bold hover:bg-indigo-100 active:scale-95 transition"
             >
               Reset Filters
             </button>
           </div>
         ) : (
-          <div>
+          <div className="space-y-3">
             {jobs.map((job) => (
               <JobCard
                 key={job.id}
@@ -221,7 +222,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Proposal Modal */}
+      {/* Mobile Bottom-Sheet Proposal Modal */}
       {selectedJob && (
         <ProposalModal
           job={selectedJob}
