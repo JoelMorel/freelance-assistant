@@ -114,9 +114,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-      {/* Mobile-Optimized Sticky Navbar */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 shadow-2xs">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16 overflow-x-hidden">
+      {/* Clean Non-Sticky Navbar */}
+      <header className="bg-white border-b border-slate-200 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-lg shadow-sm">
