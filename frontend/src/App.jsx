@@ -3,17 +3,18 @@ import { fetchJobs, generateProposal } from "./api";
 import JobCard from "./components/JobCard";
 import ProposalModal from "./components/ProposalModal";
 import PreferencesModal from "./components/PreferencesModal";
+import CustomProposalModal from "./components/CustomProposalModal";
 
 const DEFAULT_SKILLS = [
   "React",
   "Next.js",
   "Node.js",
-  "TypeScript",
   "WordPress",
   "WooCommerce",
 ];
 
-const DEFAULT_EXCLUDE = ["C++", "Embedded", "DevOps", "Kubernetes"];
+// No default exclusions: give all control to the user!
+const DEFAULT_EXCLUDE = [];
 
 export default function App() {
   const [jobs, setJobs] = useState([]);
@@ -42,6 +43,7 @@ export default function App() {
   });
 
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
+  const [isCustomOpen, setIsCustomOpen] = useState(false);
 
   // Proposal modal state
   const [selectedJob, setSelectedJob] = useState(null);
@@ -134,21 +136,27 @@ export default function App() {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsCustomOpen(true)}
+              className="text-xs bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1 border border-indigo-200/60"
+            >
+              <span>✍️</span>
+              <span className="hidden xs:inline">Custom Job</span>
+            </button>
+
+            <button
               onClick={() => setIsPrefsOpen(true)}
-              className="text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 border border-slate-200/80"
-              aria-label="Tuning preferences"
+              className="text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1 border border-slate-200/80"
             >
               <span>⚙️</span>
-              <span className="hidden xs:inline">Preferences</span>
+              <span className="hidden xs:inline">Tune</span>
             </button>
 
             <button
               onClick={() => loadJobs(query, activePlatform, minScore, skills, exclude)}
-              className="text-xs bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1"
+              className="text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-2.5 py-2 rounded-xl font-bold transition"
               aria-label="Refresh jobs"
             >
-              <span>🔄</span>
-              <span className="hidden xs:inline">Refresh</span>
+              🔄
             </button>
           </div>
         </div>
@@ -166,7 +174,7 @@ export default function App() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 enterKeyHint="search"
-                placeholder="Search keywords (React, Next.js, WordPress)..."
+                placeholder="Search across all platforms (React, WordPress, Node)..."
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/60"
               />
               <span className="absolute left-3 top-3 text-slate-400 text-sm">
@@ -181,7 +189,7 @@ export default function App() {
             </button>
           </form>
 
-          {/* Row 2: Clean Side-by-Side Mobile Dropdowns */}
+          {/* Row 2: Side-by-Side Mobile Dropdowns */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
             {/* Platform Dropdown */}
             <div className="flex flex-col gap-1">
@@ -193,24 +201,24 @@ export default function App() {
                 onChange={(e) => setActivePlatform(e.target.value)}
                 className="w-full bg-slate-100 text-slate-800 text-xs font-semibold px-2.5 py-2.5 rounded-xl border-0 focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="all">🌐 All Platforms</option>
+                <option value="all">🌐 All Platforms ({jobs.length})</option>
                 <option value="upwork">🟢 Upwork</option>
-                <option value="remoteok">🔴 RemoteOK</option>
-                <option value="weworkremotely">🔵 We Work Remotely</option>
+                <option value="remoteok">🔴 RemoteOK (100+ Live)</option>
+                <option value="weworkremotely">🔵 We Work Remotely (75+ Live)</option>
               </select>
             </div>
 
             {/* Fit Score Dropdown */}
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Fit Score
+                Fit Filter
               </label>
               <select
                 value={minScore}
                 onChange={(e) => setMinScore(Number(e.target.value))}
                 className="w-full bg-slate-100 text-slate-800 text-xs font-semibold px-2.5 py-2.5 rounded-xl border-0 focus:ring-2 focus:ring-indigo-500"
               >
-                <option value={0}>🎯 All Fits</option>
+                <option value={0}>Show All Jobs (Unfiltered)</option>
                 <option value={60}>⚡ 60%+ Match</option>
                 <option value={80}>🔥 80%+ Top Matches</option>
               </select>
@@ -222,6 +230,7 @@ export default function App() {
             <span className="truncate pr-2">
               <strong>Prioritizing:</strong> {skills.slice(0, 4).join(", ")}
               {skills.length > 4 && ` +${skills.length - 4}`}
+              {exclude.length > 0 && ` • Excluded: ${exclude.length}`}
             </span>
             <button
               type="button"
@@ -233,10 +242,36 @@ export default function App() {
           </div>
         </div>
 
+        {/* Upwork Live Search Banner */}
+        {activePlatform === "upwork" && (
+          <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-200 p-3.5 rounded-2xl mb-4 text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div>
+                <p className="font-bold text-emerald-950">
+                  Upwork Live Marketplace
+                </p>
+                <p className="text-[11px] text-emerald-800">
+                  Search live gigs on the Upwork App or paste any job to draft a proposal.
+                </p>
+              </div>
+              <a
+                href={`https://www.upwork.com/nx/search/jobs/?q=${encodeURIComponent(
+                  query || "react node web development"
+                )}&sort=recency`}
+                target="_blank"
+                rel="noreferrer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-center active:scale-95 transition shadow-xs text-xs whitespace-nowrap"
+              >
+                Search Upwork Marketplace ↗
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* Count banner */}
         <div className="flex items-center justify-between mb-3 px-1 text-xs">
           <p className="text-slate-500">
-            Found <strong className="text-slate-900 font-bold">{jobs.length}</strong>{" "}
+            Displaying <strong className="text-slate-900 font-bold">{jobs.length}</strong>{" "}
             {jobs.length === 1 ? "gig" : "gigs"}
           </p>
           {loading && (
@@ -267,18 +302,19 @@ export default function App() {
               No matching gigs found
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              Try switching platforms, lowering the fit score, or tuning skills.
+              Try switching platforms, clearing the search query, or resetting filters.
             </p>
             <button
               onClick={() => {
                 setQuery("");
                 setMinScore(0);
                 setActivePlatform("all");
-                loadJobs("", "all", 0, skills, exclude);
+                setExclude([]);
+                loadJobs("", "all", 0, skills, []);
               }}
               className="text-xs bg-indigo-50 text-indigo-700 px-4 py-2.5 rounded-xl font-bold hover:bg-indigo-100 active:scale-95 transition"
             >
-              Reset Filters
+              Reset All Filters
             </button>
           </div>
         ) : (
@@ -302,6 +338,18 @@ export default function App() {
           exclude={exclude}
           onSave={handleSavePreferences}
           onClose={() => setIsPrefsOpen(false)}
+        />
+      )}
+
+      {/* Custom Job Paste Modal */}
+      {isCustomOpen && (
+        <CustomProposalModal
+          onClose={() => setIsCustomOpen(false)}
+          onProposalGenerated={({ job, proposal: prop }) => {
+            setIsCustomOpen(false);
+            setSelectedJob(job);
+            setProposal(prop);
+          }}
         />
       )}
 

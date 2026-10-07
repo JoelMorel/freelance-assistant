@@ -14,8 +14,11 @@ def clean_html(raw_html: str) -> str:
     return " ".join(clean.split())
 
 WWR_FEEDS = [
+    "https://weworkremotely.com/categories/remote-programming-jobs.rss",
     "https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss",
     "https://weworkremotely.com/categories/remote-front-end-programming-jobs.rss",
+    "https://weworkremotely.com/categories/remote-back-end-programming-jobs.rss",
+    "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss",
 ]
 
 def fetch_wwr_jobs(
