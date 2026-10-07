@@ -1,5 +1,5 @@
 import React from "react";
-import { openJobLink, isMobileDevice } from "../utils/deepLink";
+import { getJobHref, isMobileDevice } from "../utils/deepLink";
 
 export default function JobCard({ job, onGenerate, isGenerating }) {
   const getPlatformBadge = (platform) => {
@@ -101,13 +101,9 @@ export default function JobCard({ job, onGenerate, isGenerating }) {
 
         <div className="flex items-center gap-2 pt-1 sm:pt-0">
           <a
-            href={job.link}
+            href={getJobHref(job.link, job.platform)}
             target={isMobileDevice() ? "_self" : "_blank"}
             rel="noreferrer"
-            onClick={(e) => {
-              e.preventDefault();
-              openJobLink(job.link, job.platform);
-            }}
             className="flex-1 sm:flex-none text-center text-xs font-semibold text-slate-700 hover:text-black border border-slate-300 px-3 py-2.5 sm:py-1.5 rounded-xl transition hover:bg-slate-50 active:scale-95"
           >
             View Job ↗

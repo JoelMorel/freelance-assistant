@@ -13,7 +13,8 @@ def get_all_jobs(
     custom_exclude: Optional[List[str]] = None
 ) -> List[Job]:
     """
-    Fetches jobs across all supported platforms, scores them dynamically, filters, and sorts by match_score descending.
+    Fetches jobs across all supported platforms, strictly filters excluded keywords,
+    scores them dynamically, and sorts by match_score descending.
     """
     platform_key = platform.lower().strip()
     results: List[Job] = []
@@ -34,11 +35,22 @@ def get_all_jobs(
             except Exception as e:
                 print(f"[Aggregator] Task error: {e}")
 
-    # Filter by min_score
+    # 1. Strictly remove any jobs matching user-specified excluded keywords
+    if custom_exclude:
+        clean_excludes = [e.strip().lower() for e in custom_exclude if e.strip()]
+        if clean_excludes:
+            filtered = []
+            for j in results:
+                corpus = f"{j.title} {j.summary} {' '.join(j.tags)}".lower()
+                if not any(ex in corpus for ex in clean_excludes):
+                    filtered.append(j)
+            results = filtered
+
+    # 2. Filter by minimum fit score
     if min_score > 0:
         results = [j for j in results if j.match_score >= min_score]
 
-    # Sort descending by match_score, then recency
+    # 3. Sort descending by match_score
     results.sort(key=lambda j: j.match_score, reverse=True)
 
     return results

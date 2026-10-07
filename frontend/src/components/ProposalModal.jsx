@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { openJobLink, isMobileDevice } from "../utils/deepLink";
+import { getJobHref, isMobileDevice } from "../utils/deepLink";
 
 export default function ProposalModal({
   job,
@@ -108,13 +108,9 @@ export default function ProposalModal({
             )}
 
             <a
-              href={job.link}
+              href={getJobHref(job.link, job.platform)}
               target={isMobileDevice() ? "_self" : "_blank"}
               rel="noreferrer"
-              onClick={(e) => {
-                e.preventDefault();
-                openJobLink(job.link, job.platform);
-              }}
               className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-3 py-2 rounded-xl transition hover:bg-indigo-50 active:scale-95"
             >
               Open Job ↗
