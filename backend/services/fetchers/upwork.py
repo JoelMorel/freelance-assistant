@@ -52,6 +52,78 @@ def delete_upwork_token():
         except Exception as e:
             print(f"[Upwork MCP] Failed to remove token file: {e}")
 
+def exchange_client_credentials(client_id: str, client_secret: str) -> Dict[str, Any]:
+    """
+    Exchanges Upwork Client ID & Client Secret for an OAuth Access Token.
+    """
+    url = "https://www.upwork.com/api/v3/oauth2/token"
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": client_id.strip(),
+        "client_secret": client_secret.strip()
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+    }
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.post(url, data=data, headers=headers)
+            if resp.status_code == 200:
+                res_json = resp.json()
+                access_token = res_json.get("access_token")
+                if access_token:
+                    save_upwork_token(access_token, res_json.get("refresh_token"))
+                    return {
+                        "success": True,
+                        "access_token": access_token,
+                        "message": "Successfully generated Access Token from Client Credentials!"
+                    }
+            return {
+                "success": False,
+                "status_code": resp.status_code,
+                "error": f"Upwork returned HTTP {resp.status_code}: {resp.text[:300]}"
+            }
+    except Exception as e:
+        return {"success": False, "error": f"Request failed: {str(e)}"}
+
+def exchange_auth_code(code: str, client_id: str, client_secret: str, redirect_uri: str) -> Dict[str, Any]:
+    """
+    Exchanges an OAuth Authorization Code for an Access Token.
+    """
+    url = "https://www.upwork.com/api/v3/oauth2/token"
+    data = {
+        "grant_type": "authorization_code",
+        "code": code.strip(),
+        "client_id": client_id.strip(),
+        "client_secret": client_secret.strip(),
+        "redirect_uri": redirect_uri.strip()
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+    }
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.post(url, data=data, headers=headers)
+            if resp.status_code == 200:
+                res_json = resp.json()
+                access_token = res_json.get("access_token")
+                if access_token:
+                    save_upwork_token(access_token, res_json.get("refresh_token"))
+                    return {
+                        "success": True,
+                        "access_token": access_token,
+                        "message": "Successfully exchanged Authorization Code for Access Token!"
+                    }
+            return {
+                "success": False,
+                "status_code": resp.status_code,
+                "error": f"Upwork returned HTTP {resp.status_code}: {resp.text[:300]}"
+            }
+    except Exception as e:
+        return {"success": False, "error": f"Request failed: {str(e)}"}
+
 def test_upwork_mcp(token: Optional[str] = None) -> Dict[str, Any]:
     """
     Tests live communication with https://mcp.upwork.com/mcp using JSON-RPC tools/list.

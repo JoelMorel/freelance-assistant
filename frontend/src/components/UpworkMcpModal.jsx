@@ -1,14 +1,60 @@
 import React, { useState } from "react";
-import { setUpworkMcpToken, clearUpworkMcpToken, testUpworkMcpConnection } from "../api";
+import {
+  setUpworkMcpToken,
+  clearUpworkMcpToken,
+  testUpworkMcpConnection,
+  exchangeUpworkCredentials
+} from "../api";
 
 export default function UpworkMcpModal({ isConnected, onClose, onTokenSaved }) {
+  const [mode, setMode] = useState("credentials"); // "credentials" or "token"
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
   const [tokenInput, setTokenInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [msg, setMsg] = useState("");
 
-  const handleSave = async (e) => {
+  const handleExchangeCredentials = async (e) => {
+    e.preventDefault();
+    if (!clientId.trim() || !clientSecret.trim()) return;
+
+    setSaving(true);
+    setMsg("Connecting to Upwork OAuth endpoint...");
+    setTestResult(null);
+
+    try {
+      const res = await exchangeUpworkCredentials({
+        clientId: clientId.trim(),
+        clientSecret: clientSecret.trim()
+      });
+
+      if (res.success && res.access_token) {
+        setMsg("✅ Access token generated! Testing Upwork MCP server...");
+        const test = await testUpworkMcpConnection(res.access_token);
+        setTestResult(test);
+        if (test.success) {
+          setMsg("🎉 Upwork MCP connected and verified!");
+          setTimeout(() => {
+            onTokenSaved();
+            onClose();
+          }, 1500);
+        } else {
+          setMsg(`⚠️ Token created, but MCP test returned: ${test.error || "Check permissions"}`);
+          onTokenSaved();
+        }
+      } else {
+        setMsg(`❌ Upwork rejected credentials: ${res.error || "Check Client ID and Secret"}`);
+      }
+    } catch (err) {
+      setMsg("❌ Failed to reach authentication server.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveDirectToken = async (e) => {
     e.preventDefault();
     if (!tokenInput.trim()) return;
 
@@ -16,7 +62,7 @@ export default function UpworkMcpModal({ isConnected, onClose, onTokenSaved }) {
     setMsg("");
     try {
       await setUpworkMcpToken(tokenInput.trim());
-      setMsg("✅ Token saved! Testing connection...");
+      setMsg("✅ Token saved! Testing MCP connection...");
       const test = await testUpworkMcpConnection(tokenInput.trim());
       setTestResult(test);
       if (test.success) {
@@ -54,10 +100,12 @@ export default function UpworkMcpModal({ isConnected, onClose, onTokenSaved }) {
   };
 
   const handleDisconnect = async () => {
-    if (!window.confirm("Disconnect Upwork MCP token?")) return;
+    if (!window.confirm("Disconnect Upwork MCP?")) return;
     try {
       await clearUpworkMcpToken();
       setTokenInput("");
+      setClientId("");
+      setClientSecret("");
       setTestResult(null);
       setMsg("Token cleared.");
       onTokenSaved();
@@ -110,106 +158,164 @@ export default function UpworkMcpModal({ isConnected, onClose, onTokenSaved }) {
               />
               {isConnected
                 ? "Upwork MCP: Active & Connected"
-                : "Upwork MCP: Bearer Token Required"}
+                : "Upwork MCP: Credentials Required"}
             </div>
             <span className="text-[11px] opacity-80 font-mono">
               mcp.upwork.com
             </span>
           </div>
 
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70 space-y-2 text-xs text-slate-700">
-            <p className="font-semibold text-slate-900">How Upwork MCP Works:</p>
-            <p>
-              Upwork's official MCP server at <code>https://mcp.upwork.com/mcp</code> is protected by <strong>OAuth 2.1</strong>. It requires an authorization Bearer token to query the live marketplace via JSON-RPC.
-            </p>
-            <p className="text-[11px] text-slate-500">
-              💡 <strong>Tip:</strong> You can paste your token below, or set <code>UPWORK_ACCESS_TOKEN</code> in your Railway backend variables so it stays permanently connected.
-            </p>
+          {/* Mode Switcher */}
+          <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => { setMode("credentials"); setMsg(""); }}
+              className={`py-1.5 text-xs font-bold rounded-lg transition ${
+                mode === "credentials"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              🔑 Client ID & Secret
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode("token"); setMsg(""); }}
+              className={`py-1.5 text-xs font-bold rounded-lg transition ${
+                mode === "token"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              🎟️ Direct Bearer Token
+            </button>
           </div>
 
-          <form onSubmit={handleSave} className="space-y-3 pt-1">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Enter Upwork Bearer / OAuth Token
-              </label>
-              <input
-                type="password"
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                placeholder="oauth2:bearer:... or Bearer token"
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
-              />
-            </div>
+          {/* Method 1: Client ID & Secret */}
+          {mode === "credentials" ? (
+            <form onSubmit={handleExchangeCredentials} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Upwork Client ID (Key)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  placeholder="Paste your Upwork Client ID"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
+                />
+              </div>
 
-            {msg && (
-              <p className="text-xs font-semibold p-2.5 rounded-xl bg-slate-100 border border-slate-200">
-                {msg}
-              </p>
-            )}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Upwork Client Secret
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                  placeholder="Paste your Upwork Client Secret"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
+                />
+              </div>
 
-            {testResult && (
-              <div
-                className={`p-3 rounded-xl border text-xs ${
-                  testResult.success
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                    : "bg-red-50 border-red-200 text-red-900"
-                }`}
+              <button
+                type="submit"
+                disabled={saving || !clientId.trim() || !clientSecret.trim()}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-xs active:scale-95 transition disabled:opacity-50"
               >
-                <p className="font-bold">
-                  {testResult.success ? "✅ Connection Successful" : "❌ Connection Test Failed"}
+                {saving ? "Authenticating with Upwork..." : "⚡ Generate Token & Connect MCP"}
+              </button>
+            </form>
+          ) : (
+            /* Method 2: Direct Bearer Token */
+            <form onSubmit={handleSaveDirectToken} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Enter Upwork Bearer / Access Token
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  placeholder="oauth2:bearer:... or Bearer token"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={saving || !tokenInput.trim()}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-xs active:scale-95 transition disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Bearer Token & Connect"}
+              </button>
+            </form>
+          )}
+
+          {msg && (
+            <p className="text-xs font-semibold p-2.5 rounded-xl bg-slate-100 border border-slate-200">
+              {msg}
+            </p>
+          )}
+
+          {testResult && (
+            <div
+              className={`p-3 rounded-xl border text-xs ${
+                testResult.success
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                  : "bg-red-50 border-red-200 text-red-900"
+              }`}
+            >
+              <p className="font-bold">
+                {testResult.success ? "✅ Connection Successful" : "❌ Connection Test Failed"}
+              </p>
+              <p className="mt-1 text-[11px]">
+                {testResult.message || testResult.error}
+              </p>
+              {testResult.tools && testResult.tools.length > 0 && (
+                <p className="mt-1 text-[10px] font-mono text-emerald-800">
+                  Discovered Tools: {testResult.tools.slice(0, 5).join(", ")}
+                  {testResult.tools.length > 5 && ` +${testResult.tools.length - 5} more`}
                 </p>
-                <p className="mt-1 text-[11px]">
-                  {testResult.message || testResult.error}
-                </p>
-                {testResult.tools && testResult.tools.length > 0 && (
-                  <p className="mt-1 text-[10px] font-mono text-emerald-800">
-                    Discovered Tools: {testResult.tools.slice(0, 5).join(", ")}
-                    {testResult.tools.length > 5 && ` +${testResult.tools.length - 5} more`}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleTestOnly}
-                  disabled={testing}
-                  className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition active:scale-95 disabled:opacity-50"
-                >
-                  {testing ? "Testing..." : "🔍 Test MCP Server"}
-                </button>
-
-                {isConnected && (
-                  <button
-                    type="button"
-                    onClick={handleDisconnect}
-                    className="text-xs font-bold text-red-600 hover:bg-red-50 px-2.5 py-2 rounded-xl transition active:scale-95"
-                  >
-                    Disconnect
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="text-xs font-semibold text-gray-600 px-3 py-2 rounded-xl hover:bg-gray-100 transition"
-                >
-                  Close
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || !tokenInput.trim()}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs active:scale-95 transition disabled:opacity-50"
-                >
-                  {saving ? "Saving..." : "Save & Connect"}
-                </button>
-              </div>
+              )}
             </div>
-          </form>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTestOnly}
+                disabled={testing}
+                className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition active:scale-95 disabled:opacity-50"
+              >
+                {testing ? "Testing..." : "🔍 Ping MCP Server"}
+              </button>
+
+              {isConnected && (
+                <button
+                  type="button"
+                  onClick={handleDisconnect}
+                  className="text-xs font-bold text-red-600 hover:bg-red-50 px-2.5 py-2 rounded-xl transition active:scale-95"
+                >
+                  Disconnect
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs font-semibold text-gray-600 px-3 py-2 rounded-xl hover:bg-gray-100 transition"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

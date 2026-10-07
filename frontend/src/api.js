@@ -84,3 +84,20 @@ export async function testUpworkMcpConnection(token = null) {
     };
   }
 }
+
+export async function exchangeUpworkCredentials({ clientId, clientSecret, redirectUri = "", code = "" }) {
+  try {
+    const res = await axios.post(`${API_BASE}/auth/upwork/exchange`, {
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      code
+    });
+    return res.data;
+  } catch (err) {
+    return {
+      success: false,
+      error: err.response?.data?.detail || err.message || "Failed to reach server"
+    };
+  }
+}

@@ -3,7 +3,14 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from services.fetchers.aggregator import get_all_jobs
-from services.fetchers.upwork import get_upwork_token, save_upwork_token, delete_upwork_token, test_upwork_mcp
+from services.fetchers.upwork import (
+    get_upwork_token,
+    save_upwork_token,
+    delete_upwork_token,
+    test_upwork_mcp,
+    exchange_client_credentials,
+    exchange_auth_code
+)
 from services.proposal_gen import generate_proposal
 from models import ProposalRequest, ProposalResponse
 
@@ -22,6 +29,12 @@ class TokenPayload(BaseModel):
 
 class TestTokenPayload(BaseModel):
     token: Optional[str] = None
+
+class CredentialsPayload(BaseModel):
+    client_id: str
+    client_secret: str
+    redirect_uri: Optional[str] = None
+    code: Optional[str] = None
 
 @app.get("/health")
 def health():
@@ -55,6 +68,20 @@ def remove_upwork_token():
 @app.post("/auth/upwork/test")
 def test_upwork_endpoint(payload: TestTokenPayload):
     return test_upwork_mcp(payload.token)
+
+@app.post("/auth/upwork/exchange")
+def exchange_upwork_credentials(payload: CredentialsPayload):
+    if payload.code:
+        return exchange_auth_code(
+            code=payload.code,
+            client_id=payload.client_id,
+            client_secret=payload.client_secret,
+            redirect_uri=payload.redirect_uri or ""
+        )
+    return exchange_client_credentials(
+        client_id=payload.client_id,
+        client_secret=payload.client_secret
+    )
 
 @app.get("/jobs")
 def get_jobs(
