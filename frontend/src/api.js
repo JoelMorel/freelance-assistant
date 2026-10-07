@@ -53,3 +53,34 @@ export async function generateProposal({ title, description, platform, company, 
     throw err;
   }
 }
+
+export async function getUpworkMcpStatus() {
+  try {
+    const res = await axios.get(`${API_BASE}/auth/upwork/status`);
+    return res.data;
+  } catch (err) {
+    return { connected: false };
+  }
+}
+
+export async function setUpworkMcpToken(token) {
+  const res = await axios.post(`${API_BASE}/auth/upwork/token`, { token });
+  return res.data;
+}
+
+export async function clearUpworkMcpToken() {
+  const res = await axios.delete(`${API_BASE}/auth/upwork/token`);
+  return res.data;
+}
+
+export async function testUpworkMcpConnection(token = null) {
+  try {
+    const res = await axios.post(`${API_BASE}/auth/upwork/test`, { token });
+    return res.data;
+  } catch (err) {
+    return {
+      success: false,
+      error: err.response?.data?.detail || err.message || "Failed to reach server"
+    };
+  }
+}

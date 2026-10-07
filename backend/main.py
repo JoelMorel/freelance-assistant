@@ -1,23 +1,60 @@
-from fastapi import FastAPI, Query
+from typing import Optional
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from services.fetchers.aggregator import get_all_jobs
+from services.fetchers.upwork import get_upwork_token, save_upwork_token, delete_upwork_token, test_upwork_mcp
 from services.proposal_gen import generate_proposal
 from models import ProposalRequest, ProposalResponse
 
-app = FastAPI(title="AI Freelance Assistant API", version="2.1")
+app = FastAPI(title="AI Freelance Assistant API", version="2.2")
 
-# Allow frontend to access backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For local development
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+class TokenPayload(BaseModel):
+    token: str
+
+class TestTokenPayload(BaseModel):
+    token: Optional[str] = None
+
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.1"}
+    return {
+        "status": "ok",
+        "version": "2.2",
+        "upwork_mcp_connected": bool(get_upwork_token())
+    }
+
+@app.get("/auth/upwork/status")
+def upwork_status():
+    token = get_upwork_token()
+    return {
+        "connected": bool(token),
+        "mcp_url": "https://mcp.upwork.com/mcp",
+        "hint": "Set UPWORK_ACCESS_TOKEN in Railway or enter via dashboard modal."
+    }
+
+@app.post("/auth/upwork/token")
+def set_upwork_token(payload: TokenPayload):
+    if not payload.token.strip():
+        raise HTTPException(status_code=400, detail="Token cannot be empty")
+    save_upwork_token(payload.token.strip())
+    return {"status": "success", "message": "Upwork MCP token saved successfully!"}
+
+@app.delete("/auth/upwork/token")
+def remove_upwork_token():
+    delete_upwork_token()
+    return {"status": "success", "message": "Upwork MCP token cleared."}
+
+@app.post("/auth/upwork/test")
+def test_upwork_endpoint(payload: TestTokenPayload):
+    return test_upwork_mcp(payload.token)
 
 @app.get("/jobs")
 def get_jobs(
@@ -42,6 +79,7 @@ def get_jobs(
         "total": len(jobs),
         "platform": platform,
         "query": q,
+        "upwork_mcp_active": bool(get_upwork_token()),
         "skills": skills_list or [],
         "exclude": exclude_list or []
     }

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { fetchJobs, generateProposal } from "./api";
+import { fetchJobs, generateProposal, getUpworkMcpStatus } from "./api";
 import JobCard from "./components/JobCard";
 import ProposalModal from "./components/ProposalModal";
 import PreferencesModal from "./components/PreferencesModal";
 import CustomProposalModal from "./components/CustomProposalModal";
+import UpworkMcpModal from "./components/UpworkMcpModal";
 
 const DEFAULT_SKILLS = [
   "React",
@@ -44,6 +45,21 @@ export default function App() {
 
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
   const [isCustomOpen, setIsCustomOpen] = useState(false);
+  const [isMcpOpen, setIsMcpOpen] = useState(false);
+  const [mcpStatus, setMcpStatus] = useState({ connected: false });
+
+  const checkMcpStatus = async () => {
+    try {
+      const res = await getUpworkMcpStatus();
+      setMcpStatus(res || { connected: false });
+    } catch {
+      setMcpStatus({ connected: false });
+    }
+  };
+
+  useEffect(() => {
+    checkMcpStatus();
+  }, []);
 
   // Proposal modal state
   const [selectedJob, setSelectedJob] = useState(null);
@@ -134,25 +150,48 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              onClick={() => setIsMcpOpen(true)}
+              className={`text-xs px-2.5 py-2 rounded-xl font-bold transition flex items-center gap-1.5 border active:scale-95 ${
+                mcpStatus.connected
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                  : "bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100"
+              }`}
+              title="Official Upwork Model Context Protocol (MCP)"
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  mcpStatus.connected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                }`}
+              />
+              <span className="font-mono text-[11px] font-bold">Upwork MCP</span>
+              <span className="text-[10px] hidden xs:inline opacity-80">
+                {mcpStatus.connected ? "🟢" : "🔴"}
+              </span>
+            </button>
+
             <button
               onClick={() => setIsCustomOpen(true)}
-              className="text-xs bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1 border border-indigo-200/60"
+              className="text-xs bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 px-2.5 sm:px-3 py-2 rounded-xl font-bold transition flex items-center gap-1 border border-indigo-200/60"
             >
               <span>✍️</span>
-              <span className="hidden xs:inline">Custom Job</span>
+              <span className="hidden xs:inline">Custom</span>
             </button>
 
             <button
               onClick={() => setIsPrefsOpen(true)}
-              className="text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1 border border-slate-200/80"
+              className="text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 px-2.5 sm:px-3 py-2 rounded-xl font-bold transition flex items-center gap-1 border border-slate-200/80"
             >
               <span>⚙️</span>
               <span className="hidden xs:inline">Tune</span>
             </button>
 
             <button
-              onClick={() => loadJobs(query, activePlatform, minScore, skills, exclude)}
+              onClick={() => {
+                checkMcpStatus();
+                loadJobs(query, activePlatform, minScore, skills, exclude);
+              }}
               className="text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-2.5 py-2 rounded-xl font-bold transition"
               aria-label="Refresh jobs"
             >
@@ -202,7 +241,9 @@ export default function App() {
                 className="w-full bg-slate-100 text-slate-800 text-xs font-semibold px-2.5 py-2.5 rounded-xl border-0 focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="all">🌐 All Platforms ({jobs.length})</option>
-                <option value="upwork">🟢 Upwork</option>
+                <option value="upwork">
+                  {mcpStatus.connected ? "⚡ Upwork (MCP Live 🟢)" : "⚡ Upwork (Connect MCP 🔴)"}
+                </option>
                 <option value="remoteok">🔴 RemoteOK (100+ Live)</option>
                 <option value="weworkremotely">🔵 We Work Remotely (75+ Live)</option>
               </select>
@@ -242,28 +283,58 @@ export default function App() {
           </div>
         </div>
 
-        {/* Upwork Live Search Banner */}
+        {/* Upwork MCP Banner */}
         {activePlatform === "upwork" && (
-          <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-200 p-3.5 rounded-2xl mb-4 text-xs">
+          <div
+            className={`p-3.5 rounded-2xl mb-4 text-xs border ${
+              mcpStatus.connected
+                ? "bg-emerald-50/70 border-emerald-200"
+                : "bg-amber-50/80 border-amber-200"
+            }`}
+          >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div>
-                <p className="font-bold text-emerald-950">
-                  Upwork Live Marketplace
+                <p className={`font-bold flex items-center gap-1.5 ${
+                  mcpStatus.connected ? "text-emerald-950" : "text-amber-950"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${mcpStatus.connected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                  {mcpStatus.connected
+                    ? "Upwork MCP Server: Live Connected"
+                    : "Upwork MCP Server: Bearer Token Required"}
                 </p>
-                <p className="text-[11px] text-emerald-800">
-                  Search live gigs on the Upwork App or paste any job to draft a proposal.
+                <p className={`text-[11px] mt-0.5 ${
+                  mcpStatus.connected ? "text-emerald-800" : "text-amber-800"
+                }`}>
+                  {mcpStatus.connected
+                    ? "Direct JSON-RPC streaming from mcp.upwork.com without scraping blocks."
+                    : "Connect your Upwork Bearer token to stream live marketplace gigs via the official Model Context Protocol."}
                 </p>
               </div>
-              <a
-                href={`https://www.upwork.com/nx/search/jobs/?q=${encodeURIComponent(
-                  query || "react node web development"
-                )}&sort=recency`}
-                target="_blank"
-                rel="noreferrer"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-center active:scale-95 transition shadow-xs text-xs whitespace-nowrap"
-              >
-                Search Upwork Marketplace ↗
-              </a>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsMcpOpen(true)}
+                  className={`font-bold px-3.5 py-2 rounded-xl text-center active:scale-95 transition shadow-xs text-xs whitespace-nowrap ${
+                    mcpStatus.connected
+                      ? "bg-emerald-700 hover:bg-emerald-800 text-white"
+                      : "bg-amber-600 hover:bg-amber-700 text-white"
+                  }`}
+                >
+                  {mcpStatus.connected ? "Manage MCP ⚡" : "Connect Upwork MCP ⚡"}
+                </button>
+                <a
+                  href={`https://www.upwork.com/nx/search/jobs/?q=${encodeURIComponent(
+                    query || (skills.length > 0 ? skills.join(" ") : "react developer")
+                  )}&sort=recency`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-2 rounded-xl text-center active:scale-95 transition text-xs whitespace-nowrap"
+                  title="Search directly on Upwork website/app"
+                >
+                  Open Upwork App ↗
+                </a>
+              </div>
             </div>
           </div>
         )}
@@ -361,6 +432,18 @@ export default function App() {
           onClose={() => setSelectedJob(null)}
           onRegenerate={() => handleGenerate(selectedJob)}
           isGenerating={isGenerating}
+        />
+      )}
+
+      {/* Upwork MCP Configuration Modal */}
+      {isMcpOpen && (
+        <UpworkMcpModal
+          isConnected={mcpStatus.connected}
+          onClose={() => setIsMcpOpen(false)}
+          onTokenSaved={() => {
+            checkMcpStatus();
+            loadJobs(query, activePlatform, minScore, skills, exclude);
+          }}
         />
       )}
     </div>
